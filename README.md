@@ -31,6 +31,10 @@
 
 ## 建置與安裝
 
+每次 push 到 `main`，GitHub Actions 會自動 build，在 repo 的 **Actions** 頁面點進最新一次執行，下方 Artifacts 的 `app-debug` 就是 APK。
+
+本機建置：
+
 需求：Android Studio（Ladybug 以上）或 Android SDK（compileSdk 36）+ JDK 17/21。
 
 ```bash
