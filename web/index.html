@@ -60,6 +60,11 @@
   .video-wrap { position: relative; width: 100%; aspect-ratio: 16 / 9; background: #000; }
   /* 不讓 iframe 吃掉觸控和按鍵：點畫面由外層處理播放／暫停，鍵盤焦點留在本頁 */
   .video-wrap iframe, .video-wrap > div { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; pointer-events: none; }
+  /* 手機例外：暫停過再播放時，YouTube 會在畫面中間留著播放／暫停圖示，
+     要手指點到播放器才會自動隱藏，所以觸控裝置讓點擊進到播放器。 */
+  @media (pointer: coarse) {
+    .video-wrap iframe { pointer-events: auto; }
+  }
   .info { padding: 8px 12px 16px; }
   #status {
     font-variant-numeric: tabular-nums; font-size: 15px; display: flex;
@@ -720,7 +725,7 @@ $("largeBtn").addEventListener("click", () => showStepPicker("large"));
 $("rateBtn").addEventListener("click", () => changeRate(1, true));
 $("backBtn").addEventListener("click", goHome);
 $("help").textContent = isTouch
-  ? "按住步進鍵可連續步進　拖動進度條、手指停住就會預覽　點「小／大」設定步距　點畫面播放／暫停"
+  ? "按住步進鍵可連續步進　拖動進度條、手指停住就會預覽　點「小／大」設定步距　影片中間的圖示不消失時，點一下影片"
   : "←/→ 小步　↓/↑ 大步　空白鍵 播放/暫停　[ / ] 調速度　Esc 回首頁";
 setupSeekBar();
 
