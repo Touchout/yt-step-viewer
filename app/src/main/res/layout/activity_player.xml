@@ -25,6 +25,20 @@
         android:paddingHorizontal="32dp"
         android:paddingVertical="8dp">
 
+        <!-- 進度條：拖動時直接讓播放器跳到該位置當作即時預覽。
+             電視上不給焦點，遙控器按鍵全部交給 Activity 處理。 -->
+        <SeekBar
+            android:id="@+id/seekBar"
+            android:layout_width="match_parent"
+            android:layout_height="32dp"
+            android:focusable="false"
+            android:max="0"
+            android:paddingHorizontal="8dp"
+            android:progressBackgroundTint="#55FFFFFF"
+            android:progressTint="#F2A900"
+            android:secondaryProgressTint="#99FFFFFF"
+            android:thumbTint="#F2A900" />
+
         <TextView
             android:id="@+id/statusText"
             android:layout_width="match_parent"

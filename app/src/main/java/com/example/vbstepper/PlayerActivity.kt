@@ -12,6 +12,7 @@ import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 import android.widget.Button
+import android.widget.SeekBar
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants
@@ -31,6 +32,7 @@ import java.util.Locale
  *  ⏪/⏩       降低／提高速度（遙控器有這兩鍵時）
  *
  * 觸控裝置（手機、平板）會在資訊列多一排按鈕，做同樣的事。
+ * 進度條可以拖動，拖動時播放器會跟著跳，當作即時預覽。
  */
 class PlayerActivity : AppCompatActivity() {
 
@@ -56,6 +58,12 @@ class PlayerActivity : AppCompatActivity() {
 
         /** 觸控按住步進鍵多久後開始連續步進。 */
         private const val TOUCH_REPEAT_DELAY_MS = 400L
+
+        /**
+         * 拖動進度條時送 seek 的最小間隔。太密會讓播放器排隊、反而更慢；
+         * 間隔內的移動會合併，只送最後的位置。
+         */
+        private const val SCRUB_SEEK_INTERVAL_MS = 100L
     }
 
     private lateinit var playerView: YouTubePlayerView
@@ -63,6 +71,7 @@ class PlayerActivity : AppCompatActivity() {
     private lateinit var playButton: Button
     private lateinit var stepButton: Button
     private lateinit var rateButton: Button
+    private lateinit var seekBar: SeekBar
     private val handler = Handler(Looper.getMainLooper())
 
     private var player: YouTubePlayer? = null
@@ -73,6 +82,12 @@ class PlayerActivity : AppCompatActivity() {
     private var duration = 0f
     private var playing = false
     private var lastSeekAt = 0L
+
+    // 進度條拖動狀態
+    private var scrubbing = false
+    private var resumeAfterScrub = false
+    private var lastScrubSeekAt = 0L
+    private val pendingScrubSeek = Runnable { scrubSeekNow() }
 
     private var stepIndex = DEFAULT_STEP_INDEX
     private var rateIndex = DEFAULT_RATE_INDEX
@@ -87,6 +102,8 @@ class PlayerActivity : AppCompatActivity() {
         playButton = findViewById(R.id.playButton)
         stepButton = findViewById(R.id.stepButton)
         rateButton = findViewById(R.id.rateButton)
+        seekBar = findViewById(R.id.seekBar)
+        setupSeekBar()
         videoId = intent.getStringExtra(EXTRA_VIDEO_ID) ?: run { finish(); return }
 
         lifecycle.addObserver(playerView)
@@ -110,7 +127,7 @@ class PlayerActivity : AppCompatActivity() {
             }
 
             override fun onCurrentSecond(youTubePlayer: YouTubePlayer, second: Float) {
-                if (playing && SystemClock.uptimeMillis() - lastSeekAt > SEEK_SETTLE_MS) {
+                if (playing && !scrubbing && SystemClock.uptimeMillis() - lastSeekAt > SEEK_SETTLE_MS) {
                     cursor = second
                     updateStatus()
                 }
@@ -118,7 +135,13 @@ class PlayerActivity : AppCompatActivity() {
 
             override fun onVideoDuration(youTubePlayer: YouTubePlayer, duration: Float) {
                 this@PlayerActivity.duration = duration
+                seekBar.max = (duration * 1000).toInt()
                 updateStatus()
+            }
+
+            override fun onVideoLoadedFraction(youTubePlayer: YouTubePlayer, loadedFraction: Float) {
+                // 已緩衝的範圍，拖到這段內預覽會特別快
+                seekBar.secondaryProgress = (loadedFraction * seekBar.max).toInt()
             }
 
             override fun onPlaybackRateChange(youTubePlayer: YouTubePlayer, playbackRate: PlayerConstants.PlaybackRate) {
@@ -143,6 +166,49 @@ class PlayerActivity : AppCompatActivity() {
     override fun onDestroy() {
         handler.removeCallbacksAndMessages(null)
         super.onDestroy()
+    }
+
+    private fun setupSeekBar() {
+        seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onStartTrackingTouch(bar: SeekBar) {
+                scrubbing = true
+                resumeAfterScrub = playing
+                // 暫停後 seek 才會停在那一格給你看
+                if (playing) {
+                    player?.pause()
+                    playing = false
+                }
+            }
+
+            override fun onProgressChanged(bar: SeekBar, progress: Int, fromUser: Boolean) {
+                if (!fromUser) return
+                cursor = progress / 1000f
+                updateStatus()
+                scheduleScrubSeek()
+            }
+
+            override fun onStopTrackingTouch(bar: SeekBar) {
+                scrubbing = false
+                handler.removeCallbacks(pendingScrubSeek)
+                scrubSeekNow()
+                if (resumeAfterScrub) player?.play()
+            }
+        })
+    }
+
+    /** 節流：距離上次 seek 夠久就馬上送，否則排到間隔結束時送最新位置。 */
+    private fun scheduleScrubSeek() {
+        handler.removeCallbacks(pendingScrubSeek)
+        val wait = lastScrubSeekAt + SCRUB_SEEK_INTERVAL_MS - SystemClock.uptimeMillis()
+        if (wait <= 0) scrubSeekNow() else handler.postDelayed(pendingScrubSeek, wait)
+    }
+
+    private fun scrubSeekNow() {
+        val p = player ?: return
+        val now = SystemClock.uptimeMillis()
+        lastScrubSeekAt = now
+        lastSeekAt = now
+        p.seekTo(cursor)
     }
 
     private fun isTouchDevice(): Boolean {
@@ -229,6 +295,7 @@ class PlayerActivity : AppCompatActivity() {
 
     private fun step(direction: Int, isRepeat: Boolean) {
         val p = player ?: return
+        if (scrubbing) return
         val now = SystemClock.uptimeMillis()
         if (isRepeat && now - lastSeekAt < REPEAT_SEEK_INTERVAL_MS) return
 
@@ -283,6 +350,8 @@ class PlayerActivity : AppCompatActivity() {
             state, formatTime(cursor), formatTime(duration), stepLabel, formatRate(rate),
         )
         statusText.text = errorMessage?.let { "$base    ⚠ $it" } ?: base
+
+        if (!scrubbing) seekBar.progress = (cursor * 1000).toInt()
 
         playButton.text = if (playing) "❚❚ 暫停" else "▶ 播放"
         stepButton.text = "步距 $stepLabel"
