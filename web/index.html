@@ -111,6 +111,51 @@
   @media (min-width: 700px) {
     .controls button { font-size: 18px; }
   }
+
+  /* ---- 橫式（直板手機打橫、電腦）：影片在左、按鈕常駐右側，整個畫面不捲動 ----
+     摺疊機打開接近正方形，不會進到這裡，維持上下排列。 */
+  @media (min-aspect-ratio: 13/9) {
+    #player {
+      max-width: none;
+      height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+      display: grid;
+      grid-template-columns: 1fr clamp(150px, 24vw, 280px);
+      grid-template-rows: 1fr auto auto;
+      overflow: hidden;
+    }
+    /* 影片框填滿左側，YouTube 播放器自己會加黑邊維持比例 */
+    .video-wrap { grid-column: 1; grid-row: 1; aspect-ratio: auto; height: 100%; min-height: 0; }
+    .info { display: contents; }
+    #status { grid-column: 1; grid-row: 2; padding: 4px 12px 0; font-size: 13px; }
+    #status .time { font-size: 15px; }
+    #status .meta { display: none; } /* 步距、速度已經顯示在右側按鈕上 */
+    #seek { grid-column: 1; grid-row: 3; width: auto; margin: 0 12px 4px; height: 28px; }
+    .help { display: none; }
+    .pad {
+      grid-column: 2; grid-row: 1 / -1;
+      display: grid; gap: 6px; padding: 6px;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: repeat(5, minmax(0, 1fr));
+      grid-template-areas:
+        "sb sf"
+        "lb lf"
+        "pl pl"
+        "ss ls"
+        "rt hm";
+    }
+    .controls, .settings { display: contents; }
+    .pad button { padding: 4px; font-size: 16px; min-height: 0; margin: 0; }
+    .pad .settings button { font-size: 14px; }
+    [data-step="small"][data-dir="-1"] { grid-area: sb; }
+    [data-step="small"][data-dir="1"] { grid-area: sf; }
+    [data-step="large"][data-dir="-1"] { grid-area: lb; }
+    [data-step="large"][data-dir="1"] { grid-area: lf; }
+    #playBtn { grid-area: pl; font-size: 22px; }
+    #smallBtn { grid-area: ss; }
+    #largeBtn { grid-area: ls; }
+    #rateBtn { grid-area: rt; }
+    #backBtn { grid-area: hm; }
+  }
 </style>
 </head>
 <body>
@@ -133,6 +178,7 @@
   <div class="info">
     <div id="status"></div>
     <input id="seek" type="range" min="0" max="0" step="1" value="0" aria-label="進度">
+    <div class="pad">
     <div class="controls">
       <button data-step="large" data-dir="-1" aria-label="後退大步距">⏪ 大</button>
       <button data-step="small" data-dir="-1" aria-label="後退小步距">◀ 小</button>
@@ -145,6 +191,7 @@
       <button id="smallBtn"></button>
       <button id="largeBtn"></button>
       <button id="rateBtn"></button>
+    </div>
     </div>
     <p class="help" id="help"></p>
   </div>
@@ -445,7 +492,7 @@ function updateStatus() {
     status.append(span);
   };
   add("time", `${playing ? "▶" : "❚❚"}  ${formatTime(cursor)} / ${formatTime(duration)}`);
-  add("", `小步 ${small}　大步 ${large}　速度 ${rate}x`);
+  add("meta", `小步 ${small}　大步 ${large}　速度 ${rate}x`);
   if (errorMessage) add("error", `⚠ ${errorMessage}`);
 
   const seek = $("seek");
