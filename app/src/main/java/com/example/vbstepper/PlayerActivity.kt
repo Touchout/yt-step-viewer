@@ -1,8 +1,17 @@
 package com.example.vbstepper
 
+import android.annotation.SuppressLint
+import android.app.UiModeManager
+import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import android.view.KeyEvent
+import android.view.MotionEvent
+import android.view.View
+import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.PlayerConstants
@@ -20,6 +29,8 @@ import java.util.Locale
  *  OK         播放／暫停
  *  長按 OK     循環切換速度 0.25x → 0.5x → 1x
  *  ⏪/⏩       降低／提高速度（遙控器有這兩鍵時）
+ *
+ * 觸控裝置（手機、平板）會在資訊列多一排按鈕，做同樣的事。
  */
 class PlayerActivity : AppCompatActivity() {
 
@@ -42,10 +53,17 @@ class PlayerActivity : AppCompatActivity() {
 
         /** 按住左右鍵時，限制 seek 的頻率，避免塞爆播放器。 */
         private const val REPEAT_SEEK_INTERVAL_MS = 120L
+
+        /** 觸控按住步進鍵多久後開始連續步進。 */
+        private const val TOUCH_REPEAT_DELAY_MS = 400L
     }
 
     private lateinit var playerView: YouTubePlayerView
     private lateinit var statusText: TextView
+    private lateinit var playButton: Button
+    private lateinit var stepButton: Button
+    private lateinit var rateButton: Button
+    private val handler = Handler(Looper.getMainLooper())
 
     private var player: YouTubePlayer? = null
     private var videoId = ""
@@ -66,6 +84,9 @@ class PlayerActivity : AppCompatActivity() {
         setContentView(R.layout.activity_player)
         playerView = findViewById(R.id.playerView)
         statusText = findViewById(R.id.statusText)
+        playButton = findViewById(R.id.playButton)
+        stepButton = findViewById(R.id.stepButton)
+        rateButton = findViewById(R.id.rateButton)
         videoId = intent.getStringExtra(EXTRA_VIDEO_ID) ?: run { finish(); return }
 
         lifecycle.addObserver(playerView)
@@ -115,7 +136,55 @@ class PlayerActivity : AppCompatActivity() {
             }
         }, true, options)
 
+        if (isTouchDevice()) setupTouchControls()
         updateStatus()
+    }
+
+    override fun onDestroy() {
+        handler.removeCallbacksAndMessages(null)
+        super.onDestroy()
+    }
+
+    private fun isTouchDevice(): Boolean {
+        val uiMode = getSystemService(UiModeManager::class.java).currentModeType
+        return uiMode != Configuration.UI_MODE_TYPE_TELEVISION &&
+            packageManager.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN)
+    }
+
+    private fun setupTouchControls() {
+        findViewById<View>(R.id.touchControls).visibility = View.VISIBLE
+        findViewById<TextView>(R.id.helpText).setText(R.string.help_touch)
+
+        bindHoldToStep(findViewById(R.id.backButton), -1)
+        bindHoldToStep(findViewById(R.id.forwardButton), +1)
+        playButton.setOnClickListener { togglePlay() }
+        stepButton.setOnClickListener { changeStep(+1, wrap = true) }
+        rateButton.setOnClickListener { changeRate(+1, wrap = true) }
+    }
+
+    /** 點一下步進一次；按住超過 [TOUCH_REPEAT_DELAY_MS] 就連續步進，和遙控器按住一樣。 */
+    @SuppressLint("ClickableViewAccessibility")
+    private fun bindHoldToStep(button: Button, direction: Int) {
+        val repeat = object : Runnable {
+            override fun run() {
+                step(direction, isRepeat = true)
+                handler.postDelayed(this, REPEAT_SEEK_INTERVAL_MS)
+            }
+        }
+        button.setOnTouchListener { v, event ->
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    v.isPressed = true
+                    step(direction, isRepeat = false)
+                    handler.postDelayed(repeat, TOUCH_REPEAT_DELAY_MS)
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    v.isPressed = false
+                    handler.removeCallbacks(repeat)
+                }
+            }
+            true
+        }
     }
 
     // 在 Activity 層攔截按鍵，不讓 WebView 吃掉 DPAD 事件。
@@ -184,8 +253,12 @@ class PlayerActivity : AppCompatActivity() {
         }
     }
 
-    private fun changeStep(delta: Int) {
-        stepIndex = (stepIndex + delta).coerceIn(0, STEPS.lastIndex)
+    private fun changeStep(delta: Int, wrap: Boolean = false) {
+        stepIndex = if (wrap) {
+            (stepIndex + delta).mod(STEPS.size)
+        } else {
+            (stepIndex + delta).coerceIn(0, STEPS.lastIndex)
+        }
         updateStatus()
     }
 
@@ -210,6 +283,10 @@ class PlayerActivity : AppCompatActivity() {
             state, formatTime(cursor), formatTime(duration), stepLabel, formatRate(rate),
         )
         statusText.text = errorMessage?.let { "$base    ⚠ $it" } ?: base
+
+        playButton.text = if (playing) "❚❚ 暫停" else "▶ 播放"
+        stepButton.text = "步距 $stepLabel"
+        rateButton.text = "速度 ${formatRate(rate)}x"
     }
 
     private fun formatTime(seconds: Float): String {

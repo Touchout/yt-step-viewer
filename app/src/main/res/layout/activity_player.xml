@@ -33,7 +33,40 @@
             android:textColor="#FFFFFF"
             android:textSize="20sp" />
 
+        <!-- 觸控裝置（手機、平板）才顯示，電視維持遙控器操作 -->
+        <LinearLayout
+            android:id="@+id/touchControls"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <Button
+                android:id="@+id/backButton"
+                style="@style/TouchControl"
+                android:text="@string/step_back" />
+
+            <Button
+                android:id="@+id/playButton"
+                style="@style/TouchControl" />
+
+            <Button
+                android:id="@+id/forwardButton"
+                style="@style/TouchControl"
+                android:text="@string/step_forward" />
+
+            <Button
+                android:id="@+id/stepButton"
+                style="@style/TouchControl" />
+
+            <Button
+                android:id="@+id/rateButton"
+                style="@style/TouchControl" />
+        </LinearLayout>
+
         <TextView
+            android:id="@+id/helpText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/help"
