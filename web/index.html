@@ -387,6 +387,8 @@ window.onYouTubeIframeAPIReady = () => {
       },
       onStateChange: (e) => {
         playing = e.data === YT.PlayerState.PLAYING;
+        // 重新載入影片後速度會回到 1x，補設回來
+        if (playing && player.getPlaybackRate() !== RATES[rateIndex]) player.setPlaybackRate(RATES[rateIndex]);
         refreshDuration();
         if (playing) startPolling(); else stopPolling();
         updateStatus();
@@ -466,7 +468,20 @@ function togglePlay() {
   if (playing) {
     player.pauseVideo();
   } else {
-    lastSeekAt = performance.now();
+    resumePlayback();
+  }
+}
+
+/**
+ * 手機上暫停過再用 playVideo() 繼續，YouTube 會在畫面中間留著播放／暫停圖示不消失
+ * （它要等手指點到播放器才會自動隱藏，而我們的頁面不讓觸控進到播放器）。
+ * 第一次播放不會有這個問題，所以從暫停恢復時改成從目前位置重新載入並播放。
+ */
+function resumePlayback() {
+  lastSeekAt = performance.now();
+  if (isTouch && player.getPlayerState() === YT.PlayerState.PAUSED) {
+    player.loadVideoById({ videoId, startSeconds: cursor });
+  } else {
     player.playVideo();
   }
 }
@@ -561,7 +576,7 @@ function setupSeekBar() {
     } else {
       scrubSeekTo(target);
     }
-    if (resumeAfterScrub && playerReady) player.playVideo();
+    if (resumeAfterScrub && playerReady) resumePlayback();
   };
   seek.addEventListener("pointerup", endScrub);
   seek.addEventListener("pointercancel", endScrub);
