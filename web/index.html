@@ -53,7 +53,55 @@
     text-align: left; background: var(--panel); white-space: nowrap;
     overflow: hidden; text-overflow: ellipsis;
   }
-  #recentEmpty { color: var(--muted); font-size: 14px; }
+  #recentEmpty, #favEmpty { color: var(--muted); font-size: 14px; }
+  #favList { display: flex; flex-direction: column; gap: 6px; }
+  .chan-btn {
+    display: flex; align-items: center; gap: 10px; text-align: left; background: var(--panel);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .chan-btn img, .ch-head img { width: 32px; height: 32px; border-radius: 50%; flex: none; background: var(--panel-2); }
+  .chan-btn span { overflow: hidden; text-overflow: ellipsis; }
+  details { margin-top: 28px; background: var(--panel); border-radius: 10px; padding: 10px 12px; }
+  summary { cursor: pointer; color: var(--muted); font-size: 15px; }
+  details p { font-size: 14px; color: var(--muted); margin: 8px 0; }
+  details textarea {
+    width: 100%; min-height: 90px; background: var(--bg); color: var(--text);
+    border: 1px solid var(--track); border-radius: 8px; padding: 8px; font: 13px/1.4 ui-monospace, monospace;
+  }
+  .row { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  .row input {
+    flex: 1; min-width: 0; background: var(--bg); border: 1px solid var(--track);
+    border-radius: 10px; padding: 8px 10px;
+  }
+  .note { font-size: 13px; min-height: 1.4em; margin: 6px 0 0; color: var(--muted); }
+  .note.error { color: var(--danger); }
+  a { color: var(--accent); }
+
+  /* ---- 頻道影片清單 ---- */
+  #channel { max-width: 1100px; margin: 0 auto; padding: 12px 16px 40px; }
+  .ch-head { display: flex; align-items: center; gap: 10px; }
+  .ch-head img { width: 40px; height: 40px; }
+  #chTitle { flex: 1; min-width: 0; font-size: 18px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #favBtn.on { color: var(--accent); }
+  .ch-tools { display: flex; gap: 8px; margin: 12px 0 8px; align-items: center; }
+  .ch-tools input {
+    flex: 1; min-width: 0; background: var(--panel); border: 1px solid var(--track);
+    border-radius: 10px; padding: 8px 10px;
+  }
+  .tabs { display: flex; gap: 4px; }
+  .tabs button { padding: 8px 12px; font-size: 14px; }
+  .tabs button.active { background: var(--accent); color: #111; font-weight: 600; }
+  #chList { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 8px; }
+  .video-card {
+    display: flex; gap: 10px; text-align: left; padding: 6px; background: var(--panel); align-items: flex-start;
+  }
+  .video-card img { width: 128px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 6px; flex: none; background: #000; }
+  .video-card .t {
+    font-size: 14px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .video-card .d { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  #chMore { width: 100%; margin-top: 12px; }
 
   /* ---- 播放畫面 ---- */
   #player { max-width: 1100px; margin: 0 auto; }
@@ -169,13 +217,57 @@
   <h1>排球動作步進</h1>
   <form class="open-row" id="openForm">
     <input id="urlInput" type="text" inputmode="url" autocomplete="off"
-           placeholder="貼上 YouTube 網址或影片 ID" aria-label="YouTube 網址或影片 ID">
+           placeholder="貼上 YouTube 影片或頻道網址" aria-label="YouTube 影片或頻道網址">
     <button type="submit">開啟</button>
   </form>
   <p id="openError"></p>
+  <h2>我的最愛頻道</h2>
+  <div id="favList"></div>
+  <p id="favEmpty">還沒有最愛頻道。貼上頻道網址（例如 youtube.com/@頻道名稱），就能加入最愛。</p>
   <h2>最近看過</h2>
   <div id="recentList"></div>
   <p id="recentEmpty">還沒有紀錄。</p>
+
+  <details id="backupBox">
+    <summary>備份／還原最愛頻道</summary>
+    <p>最愛只存在這支手機的這個瀏覽器裡。按「匯出」複製一段文字存起來，換手機或資料被清掉時，貼回來按「匯入」就能還原。</p>
+    <textarea id="backupText" spellcheck="false" aria-label="備份文字"></textarea>
+    <div class="row">
+      <button id="exportBtn" type="button">匯出</button>
+      <button id="importBtn" type="button">匯入</button>
+    </div>
+    <p class="note" id="backupNote"></p>
+  </details>
+
+  <details id="keyBox">
+    <summary>YouTube API 金鑰</summary>
+    <p>列出頻道影片需要 YouTube Data API 金鑰。這裡貼上的金鑰只存在你自己的瀏覽器。</p>
+    <form class="row" id="keyForm">
+      <input id="keyInput" type="text" autocomplete="off" spellcheck="false" placeholder="AIza…" aria-label="API 金鑰">
+      <button type="submit">儲存</button>
+    </form>
+    <p class="note" id="keyNote"></p>
+  </details>
+</section>
+
+<section id="channel" hidden>
+  <div class="ch-head">
+    <button id="chBack" aria-label="回首頁">←</button>
+    <img id="chAvatar" alt="">
+    <div id="chTitle"></div>
+    <button id="favBtn"></button>
+  </div>
+  <div class="ch-tools">
+    <div class="tabs">
+      <button data-tab="videos" class="active">影片</button>
+      <button data-tab="live">直播</button>
+    </div>
+    <input id="chFilter" type="search" placeholder="篩選標題" aria-label="篩選標題">
+    <button id="chRefresh" aria-label="重新整理">⟳</button>
+  </div>
+  <p class="note" id="chNote"></p>
+  <div id="chList"></div>
+  <button id="chMore" hidden>載入更多</button>
 </section>
 
 <section id="player" hidden>
@@ -192,7 +284,7 @@
       <button data-step="large" data-dir="1" aria-label="前進大步距">大 ⏩</button>
     </div>
     <div class="settings">
-      <button id="backBtn">← 首頁</button>
+      <button id="backBtn">← 返回</button>
       <button id="smallBtn"></button>
       <button id="largeBtn"></button>
       <button id="rateBtn"></button>
@@ -212,6 +304,7 @@
   <p class="dialog-error" id="customError"></p>
 </dialog>
 
+<script src="config.js"></script>
 <script>
 "use strict";
 
@@ -275,9 +368,10 @@ function parseVideoId(input) {
 
 // ---- 最近看過 ----
 function recentList() { return load("recent", []); }
-function addRecent(id) {
+function addRecent(id, title) {
   const list = recentList();
   const existing = list.find((v) => v.id === id) || { id, title: null };
+  if (title) existing.title = title;
   save("recent", [existing, ...list.filter((v) => v.id !== id)].slice(0, RECENT_MAX));
 }
 function setRecentTitle(id, title) {
@@ -656,38 +750,463 @@ document.addEventListener("keydown", (e) => {
     case " ": case "Enter": case "k": if (!repeat) togglePlay(); break;
     case "[": if (!repeat) changeRate(-1, false); break;
     case "]": if (!repeat) changeRate(1, false); break;
-    case "Escape": if (!repeat) goHome(); break;
+    case "Escape": if (!repeat) goBack(); break;
     default: return;
   }
   e.preventDefault();
 });
 
-// ---- 畫面切換（網址用 #v=影片ID，可以分享，也能用返回鍵回首頁） ----
-function openVideo(id) {
-  location.hash = `v=${id}`;
+// ---- 頻道（YouTube Data API v3） ----
+const CHANNEL_ID_REGEX = /^UC[A-Za-z0-9_-]{22}$/;
+const API_BASE = "https://www.googleapis.com/youtube/v3/";
+const PAGE_SIZE = 50;
+/** 頻道影片清單快取多久（毫秒）。 */
+const LIST_CACHE_MS = 60 * 60 * 1000;
+/**
+ * 頻道上傳清單的變體：UULF 只有一般影片（不含 Shorts、直播），UULV 只有直播存檔。
+ * 這兩個是 YouTube 沒有寫進文件的慣例，查不到時影片分頁退回 UU（全部上傳）。
+ */
+const TABS = {
+  videos: { prefix: "UULF", fallback: "UU", empty: "這個頻道還沒有影片" },
+  live: { prefix: "UULV", fallback: null, empty: "這個頻道沒有直播存檔" },
+};
+
+class ApiError extends Error {
+  constructor(reason, status) {
+    super(reason);
+    this.reason = reason;
+    this.status = status;
+  }
 }
-function goHome() {
-  location.hash = "";
+
+function apiKey() {
+  return load("apiKey", "") || window.YT_API_KEY || "";
+}
+
+async function ytApi(path, params) {
+  const key = apiKey();
+  if (!key) throw new ApiError("noKey");
+  const url = new URL(API_BASE + path);
+  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+  url.searchParams.set("key", key);
+  let res;
+  try { res = await fetch(url); } catch { throw new ApiError("network"); }
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const detail = json.error && json.error.errors && json.error.errors[0];
+    throw new ApiError((detail && detail.reason) || String(res.status), res.status);
+  }
+  return json;
+}
+
+function apiErrorMessage(err) {
+  switch (err.reason) {
+    case "noKey": return "還沒設定 YouTube API 金鑰（首頁最下方）";
+    case "network": return "連不上 YouTube，請檢查網路";
+    case "custom": return "這種 /c/ 舊式網址查不到，請改貼頻道首頁「@名稱」的網址";
+    case "channelNotFound": return "找不到這個頻道";
+    case "keyInvalid": case "badRequest": return "API 金鑰無效，請檢查首頁最下方的金鑰";
+    case "quotaExceeded": case "dailyLimitExceeded": return "今天的 API 用量已滿，明天再試";
+    case "accessNotConfigured": return "這把金鑰還沒啟用 YouTube Data API v3";
+    case "forbidden": case "ipRefererBlocked": return "這把金鑰不允許在這個網址使用，請檢查金鑰的網址限制";
+    default: return `查詢失敗（${err.reason || err.message}）`;
+  }
+}
+
+/** 從網址或 @名稱 判斷是哪個頻道；看不懂回傳 null。 */
+function parseChannelRef(input) {
+  const text = (input || "").trim();
+  if (CHANNEL_ID_REGEX.test(text)) return { id: text };
+  if (/^@[^\s/?#]+$/.test(text)) return { handle: text };
+  const match = text.match(/(?:https?:\/\/)?(?:[\w-]+\.)?youtube\.com\/\S*/);
+  if (!match) return null;
+  let url;
+  try { url = new URL(/^https?:/.test(match[0]) ? match[0] : `https://${match[0]}`); } catch { return null; }
+  const segments = url.pathname.split("/").filter(Boolean).map(decodeURIComponent);
+  const [first, second] = segments;
+  if (!first) return null;
+  if (first.startsWith("@")) return { handle: first };
+  if (first === "channel" && CHANNEL_ID_REGEX.test(second || "")) return { id: second };
+  if (first === "user" && second) return { username: second };
+  if (first === "c" && second) return { custom: second };
+  return null;
+}
+
+function cachedChannels() { return load("channelInfo", {}); }
+
+/** 查頻道基本資料（名稱、頭像），結果記在 localStorage，之後開同一個頻道不用再查。 */
+async function resolveChannel(ref) {
+  if (ref.custom) throw new ApiError("custom");
+  if (ref.id) {
+    const known = favList().find((c) => c.id === ref.id) || cachedChannels()[ref.id];
+    if (known) return known;
+  }
+  const params = { part: "snippet" };
+  if (ref.id) params.id = ref.id;
+  else if (ref.handle) params.forHandle = ref.handle;
+  else params.forUsername = ref.username;
+  const json = await ytApi("channels", params);
+  const item = json.items && json.items[0];
+  if (!item) throw new ApiError("channelNotFound");
+  const thumbs = item.snippet.thumbnails || {};
+  const channel = {
+    id: item.id,
+    title: item.snippet.title,
+    thumb: (thumbs.default || thumbs.medium || {}).url || "",
+  };
+  const cache = cachedChannels();
+  cache[channel.id] = channel;
+  save("channelInfo", cache);
+  return channel;
+}
+
+// ---- 最愛頻道 ----
+function favList() { return load("favChannels", []); }
+function isFav(id) { return favList().some((c) => c.id === id); }
+function toggleFav(channel) {
+  const list = favList();
+  save("favChannels", isFav(channel.id)
+    ? list.filter((c) => c.id !== channel.id)
+    : [...list, { id: channel.id, title: channel.title, thumb: channel.thumb }]);
+}
+
+function channelButton(channel) {
+  const button = document.createElement("button");
+  button.className = "chan-btn";
+  const img = document.createElement("img");
+  img.alt = "";
+  img.loading = "lazy";
+  if (channel.thumb) img.src = channel.thumb;
+  const name = document.createElement("span");
+  name.textContent = channel.title;
+  button.append(img, name);
+  button.addEventListener("click", () => openChannel(channel.id));
+  return button;
+}
+
+function renderFavorites() {
+  const list = favList();
+  $("favList").replaceChildren(...list.map(channelButton));
+  $("favEmpty").hidden = list.length > 0;
+}
+
+// ---- 備份／還原 ----
+$("exportBtn").addEventListener("click", async () => {
+  const text = JSON.stringify({ favChannels: favList() });
+  $("backupText").value = text;
+  $("backupText").select();
+  try {
+    await navigator.clipboard.writeText(text);
+    $("backupNote").textContent = `已複製 ${favList().length} 個頻道，貼到記事本或傳給自己保存`;
+  } catch {
+    $("backupNote").textContent = "請手動複製上面的文字保存";
+  }
+  $("backupNote").classList.remove("error");
+});
+$("importBtn").addEventListener("click", () => {
+  const note = $("backupNote");
+  try {
+    const data = JSON.parse($("backupText").value);
+    const incoming = (data.favChannels || []).filter((c) => c && CHANNEL_ID_REGEX.test(c.id) && typeof c.title === "string");
+    if (!incoming.length) throw new Error();
+    const list = favList();
+    const added = incoming.filter((c) => !list.some((x) => x.id === c.id))
+      .map((c) => ({ id: c.id, title: c.title, thumb: typeof c.thumb === "string" ? c.thumb : "" }));
+    save("favChannels", [...list, ...added]);
+    renderFavorites();
+    note.textContent = `已匯入 ${added.length} 個頻道（${incoming.length - added.length} 個原本就有）`;
+    note.classList.remove("error");
+  } catch {
+    note.textContent = "看不懂這段文字，請貼上「匯出」產生的內容";
+    note.classList.add("error");
+  }
+});
+
+// ---- API 金鑰 ----
+function renderKeyNote() {
+  const local = load("apiKey", "");
+  $("keyNote").textContent = local
+    ? "已使用你貼上的金鑰。清空後儲存可移除。"
+    : window.YT_API_KEY ? "已使用網站內建的金鑰。" : "尚未設定。";
+}
+$("keyForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const key = $("keyInput").value.trim();
+  save("apiKey", key);
+  $("keyInput").value = "";
+  renderKeyNote();
+  $("openError").textContent = "";
+});
+renderKeyNote();
+
+// ---- 頻道影片清單 ----
+/** 目前頻道畫面的狀態；items 是已載入的影片，next 是下一頁的 pageToken。 */
+let chState = null;
+let chLoadToken = 0;
+
+function playlistCacheKey(playlistId) { return `pl:${playlistId}`; }
+
+function saveListCache(state) {
+  const value = JSON.stringify({ at: Date.now(), items: state.items, next: state.next, playlistId: state.playlistId });
+  const key = playlistCacheKey(`${state.channel.id}:${state.tab}`);
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // 空間不夠：清掉所有清單快取再試一次
+    try {
+      Object.keys(localStorage).filter((k) => k.startsWith("pl:")).forEach((k) => localStorage.removeItem(k));
+      localStorage.setItem(key, value);
+    } catch {}
+  }
+}
+
+function loadListCache(channelId, tab) {
+  const cached = load(playlistCacheKey(`${channelId}:${tab}`), null);
+  return cached && Date.now() - cached.at < LIST_CACHE_MS ? cached : null;
+}
+
+async function showChannel(id) {
+  const fromPlayer = currentView === "player";
+  showView("channel");
+  if (chState && chState.channel.id === id) {
+    renderChannelHeader();
+    renderVideoList();
+    if (fromPlayer) scrollTo(0, channelScroll);
+    return;
+  }
+  const token = ++chLoadToken;
+  chState = null;
+  scrollTo(0, 0);
+  $("chTitle").textContent = "";
+  $("chAvatar").removeAttribute("src");
+  $("favBtn").hidden = true;
+  $("chList").replaceChildren();
+  $("chMore").hidden = true;
+  $("chFilter").value = "";
+  setChannelNote("載入中…");
+  let channel;
+  try {
+    channel = await resolveChannel({ id });
+  } catch (err) {
+    if (token === chLoadToken) setChannelNote(apiErrorMessage(err), true);
+    return;
+  }
+  if (token !== chLoadToken) return;
+  chState = { channel, tab: "videos", items: [], next: null, playlistId: null, done: false, loading: false, req: 0 };
+  document.title = channel.title;
+  renderChannelHeader();
+  for (const b of document.querySelectorAll(".tabs button")) b.hidden = false;
+  selectTab("videos");
+}
+
+function renderChannelHeader() {
+  const { channel } = chState;
+  $("chTitle").textContent = channel.title;
+  if (channel.thumb) $("chAvatar").src = channel.thumb;
+  const fav = isFav(channel.id);
+  $("favBtn").hidden = false;
+  $("favBtn").textContent = fav ? "★ 最愛" : "☆ 加入最愛";
+  $("favBtn").classList.toggle("on", fav);
+  for (const b of document.querySelectorAll(".tabs button")) b.classList.toggle("active", b.dataset.tab === chState.tab);
+}
+
+function setChannelNote(text, isError) {
+  $("chNote").textContent = text || "";
+  $("chNote").classList.toggle("error", !!isError);
+}
+
+function selectTab(tab, forceRefresh) {
+  const state = chState;
+  state.tab = tab;
+  state.req = (state.req || 0) + 1; // 作廢進行中的請求
+  state.loading = false;
+  const cached = !forceRefresh && loadListCache(state.channel.id, tab);
+  Object.assign(state, cached
+    ? { items: cached.items, next: cached.next, playlistId: cached.playlistId, done: !cached.next }
+    : { items: [], next: null, playlistId: null, done: false });
+  renderChannelHeader();
+  renderVideoList();
+  if (!cached) loadMore();
+}
+
+async function loadMore() {
+  const state = chState;
+  if (!state || state.loading || state.done) return;
+  state.loading = true;
+  // 每次請求一個編號；切分頁或重新整理後，舊請求回來的結果直接丟掉
+  const req = state.req = (state.req || 0) + 1;
+  const tab = state.tab;
+  const stale = () => state !== chState || req !== state.req;
+  setChannelNote("載入中…");
+  $("chMore").hidden = true;
+  const suffix = state.channel.id.slice(2);
+  let playlistId = state.playlistId || TABS[tab].prefix + suffix;
+  try {
+    let json;
+    try {
+      json = await fetchPlaylistPage(playlistId, state.next);
+    } catch (err) {
+      // 變體清單不存在（例如頻道沒有直播）時 API 回 404
+      if (err.status !== 404 || state.items.length) throw err;
+      if (!TABS[tab].fallback) {
+        json = { items: [] };
+      } else {
+        playlistId = TABS[tab].fallback + suffix;
+        json = await fetchPlaylistPage(playlistId, null);
+      }
+    }
+    if (stale()) return;
+    state.playlistId = playlistId;
+    state.items.push(...json.items.map(toVideo).filter(Boolean));
+    state.next = json.nextPageToken || null;
+    state.done = !state.next;
+    saveListCache(state);
+    setChannelNote("");
+  } catch (err) {
+    if (!stale()) setChannelNote(apiErrorMessage(err), true);
+  } finally {
+    if (!stale()) {
+      state.loading = false;
+      renderVideoList();
+    }
+  }
+}
+
+function fetchPlaylistPage(playlistId, pageToken) {
+  const params = { part: "snippet,contentDetails", playlistId, maxResults: PAGE_SIZE };
+  if (pageToken) params.pageToken = pageToken;
+  return ytApi("playlistItems", params);
+}
+
+/** 把 API 回傳的項目轉成我們要的欄位；私人或已刪除的影片丟掉。 */
+function toVideo(item) {
+  const thumbs = item.snippet.thumbnails || {};
+  const thumb = (thumbs.medium || thumbs.default || {}).url;
+  if (!thumb) return null;
+  return {
+    id: item.contentDetails.videoId,
+    title: item.snippet.title,
+    date: (item.contentDetails.videoPublishedAt || item.snippet.publishedAt || "").slice(0, 10),
+    thumb,
+  };
+}
+
+function renderVideoList() {
+  const state = chState;
+  if (!state) return;
+  const query = $("chFilter").value.trim().toLowerCase();
+  const shown = query ? state.items.filter((v) => v.title.toLowerCase().includes(query)) : state.items;
+  $("chList").replaceChildren(...shown.map((video) => {
+    const button = document.createElement("button");
+    button.className = "video-card";
+    const img = document.createElement("img");
+    img.alt = "";
+    img.loading = "lazy";
+    img.src = video.thumb;
+    const text = document.createElement("div");
+    const title = document.createElement("div");
+    title.className = "t";
+    title.textContent = video.title;
+    const date = document.createElement("div");
+    date.className = "d";
+    date.textContent = video.date;
+    text.append(title, date);
+    button.append(img, text);
+    button.addEventListener("click", () => openVideo(video.id, video.title));
+    return button;
+  }));
+  $("chMore").hidden = state.done || state.loading;
+  if (state.loading) return;
+  if (!state.items.length && state.done) {
+    if (state.tab === "live") {
+      // 沒有直播存檔就把分頁藏起來，切回影片
+      document.querySelector('.tabs button[data-tab="live"]').hidden = true;
+      selectTab("videos");
+      return;
+    }
+    setChannelNote(TABS[state.tab].empty);
+  } else if (query && !shown.length) {
+    setChannelNote(state.done
+      ? `${state.items.length} 支影片中沒有符合的`
+      : `已載入的 ${state.items.length} 支影片中沒有符合的，可以按「載入更多」再找`);
+  } else if (!$("chNote").classList.contains("error")) {
+    setChannelNote("");
+  }
+}
+
+$("chBack").addEventListener("click", goBack);
+$("favBtn").addEventListener("click", () => {
+  if (!chState) return;
+  toggleFav(chState.channel);
+  renderChannelHeader();
+});
+$("chMore").addEventListener("click", loadMore);
+$("chFilter").addEventListener("input", renderVideoList);
+$("chRefresh").addEventListener("click", () => {
+  if (chState) selectTab(chState.tab, true);
+});
+for (const b of document.querySelectorAll(".tabs button")) {
+  b.addEventListener("click", () => {
+    if (chState && chState.tab !== b.dataset.tab) selectTab(b.dataset.tab);
+  });
+}
+
+// ---- 畫面切換 ----
+// 網址：#v=影片ID 播放、#c=頻道ID 頻道清單、空白是首頁。可以分享，也能用返回鍵往回。
+function navigate(hash) {
+  // 標記是 App 內部跳轉，「返回」時才能用 history.back() 回到上一個畫面
+  history.pushState({ internal: true }, "", `#${hash}`);
+  route();
+}
+function openVideo(id, title) {
+  if (title) addRecent(id, title);
+  navigate(`v=${id}`);
+}
+function openChannel(id) {
+  navigate(`c=${id}`);
+}
+function goBack() {
+  if (history.state && history.state.internal) {
+    history.back();
+  } else {
+    history.replaceState(null, "", location.pathname);
+    route();
+  }
 }
 
 function route() {
-  const id = parseVideoId(new URLSearchParams(location.hash.slice(1)).get("v") || "");
-  if (id) showPlayer(id); else showHome();
+  const params = new URLSearchParams(location.hash.slice(1));
+  const id = parseVideoId(params.get("v") || "");
+  const channelId = params.get("c") || "";
+  if (id) showPlayer(id);
+  else if (CHANNEL_ID_REGEX.test(channelId)) showChannel(channelId);
+  else showHome();
+}
+
+let currentView = "home";
+let channelScroll = 0;
+function showView(name) {
+  if (currentView === "channel" && name !== "channel") channelScroll = scrollY;
+  if (currentView === "player" && name !== "player") {
+    if (playerReady && videoId) player.stopVideo();
+    stopPolling();
+    videoId = null;
+  }
+  for (const view of ["home", "channel", "player"]) $(view).hidden = view !== name;
+  const changed = currentView !== name;
+  currentView = name;
+  return changed;
 }
 
 function showHome() {
-  if (playerReady && videoId) player.stopVideo();
-  stopPolling();
-  videoId = null;
-  $("player").hidden = true;
-  $("home").hidden = false;
+  if (showView("home")) scrollTo(0, 0);
   document.title = "排球動作步進";
+  renderFavorites();
   renderRecent();
 }
 
 function showPlayer(id) {
-  $("home").hidden = true;
-  $("player").hidden = false;
+  if (showView("player")) scrollTo(0, 0);
   addRecent(id);
   if (id === videoId) return;
   videoId = id;
@@ -704,16 +1223,35 @@ function showPlayer(id) {
 }
 
 // ---- 初始化 ----
-$("openForm").addEventListener("submit", (e) => {
+$("openForm").addEventListener("submit", async (e) => {
   e.preventDefault();
-  const id = parseVideoId($("urlInput").value);
-  if (!id) {
-    $("openError").textContent = "看不懂這個網址，請確認是 YouTube 影片連結";
+  const input = $("urlInput").value;
+  const id = parseVideoId(input);
+  if (id) {
+    $("openError").textContent = "";
+    $("urlInput").value = "";
+    openVideo(id);
     return;
   }
-  $("openError").textContent = "";
-  $("urlInput").value = "";
-  openVideo(id);
+  const ref = parseChannelRef(input);
+  if (!ref) {
+    $("openError").textContent = "看不懂這個網址，請貼 YouTube 影片或頻道網址";
+    return;
+  }
+  if (!apiKey()) {
+    $("openError").textContent = "列出頻道影片要先設定 YouTube API 金鑰（在最下方）";
+    $("keyBox").open = true;
+    return;
+  }
+  $("openError").textContent = "查詢頻道中…";
+  try {
+    const channel = await resolveChannel(ref);
+    $("openError").textContent = "";
+    $("urlInput").value = "";
+    openChannel(channel.id);
+  } catch (err) {
+    $("openError").textContent = apiErrorMessage(err);
+  }
 });
 $("urlInput").addEventListener("input", () => { $("openError").textContent = ""; });
 
@@ -723,10 +1261,10 @@ $("videoWrap").addEventListener("click", togglePlay);
 $("smallBtn").addEventListener("click", () => showStepPicker("small"));
 $("largeBtn").addEventListener("click", () => showStepPicker("large"));
 $("rateBtn").addEventListener("click", () => changeRate(1, true));
-$("backBtn").addEventListener("click", goHome);
+$("backBtn").addEventListener("click", goBack);
 $("help").textContent = isTouch
   ? "按住步進鍵可連續步進　拖動進度條、手指停住就會預覽　點「小／大」設定步距　影片中間的圖示不消失時，點一下影片"
-  : "←/→ 小步　↓/↑ 大步　空白鍵 播放/暫停　[ / ] 調速度　Esc 回首頁";
+  : "←/→ 小步　↓/↑ 大步　空白鍵 播放/暫停　[ / ] 調速度　Esc 返回";
 setupSeekBar();
 
 // 從分享（PWA share target）或 ?v= 進來的，轉成 #v=
@@ -738,7 +1276,9 @@ setupSeekBar();
     history.replaceState(null, "", location.pathname + (id ? `#v=${id}` : ""));
   }
 })();
-window.addEventListener("hashchange", route);
+// 捲動位置由 showView／showChannel 自己處理，不讓瀏覽器在返回時另外還原
+if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+window.addEventListener("popstate", route);
 route();
 
 if ("serviceWorker" in navigator && location.protocol === "https:") {
