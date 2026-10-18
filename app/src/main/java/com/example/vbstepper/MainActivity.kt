@@ -2,17 +2,22 @@ package com.example.vbstepper
 
 import android.content.Intent
 import android.os.Bundle
+import android.text.TextUtils
+import android.view.Gravity
 import android.view.inputmethod.EditorInfo
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import java.util.concurrent.Executors
 
 class MainActivity : AppCompatActivity() {
     private lateinit var recent: RecentVideos
     private lateinit var urlInput: EditText
     private lateinit var recentList: LinearLayout
+    private val ioExecutor = Executors.newSingleThreadExecutor()
+    private val titlesInFlight = mutableSetOf<String>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,6 +42,11 @@ class MainActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         handleShareIntent(intent)
+    }
+
+    override fun onDestroy() {
+        ioExecutor.shutdownNow()
+        super.onDestroy()
     }
 
     override fun onResume() {
@@ -69,15 +79,34 @@ class MainActivity : AppCompatActivity() {
 
     private fun renderRecent() {
         recentList.removeAllViews()
-        for (id in recent.list()) {
+        for (video in recent.list()) {
             val button = Button(this).apply {
-                text = id
+                text = video.title ?: video.id
                 isAllCaps = false
-                setOnClickListener { openPlayer(id) }
+                maxLines = 1
+                ellipsize = TextUtils.TruncateAt.END
+                gravity = Gravity.START or Gravity.CENTER_VERTICAL
+                setOnClickListener { openPlayer(video.id) }
             }
             recentList.addView(button)
+            if (video.title == null) fetchTitle(video.id, button)
         }
         // 有歷史紀錄就讓焦點先落在最近一支，遙控器按 OK 就能開
         recentList.getChildAt(0)?.requestFocus()
+    }
+
+    /** 背景抓標題，拿到後直接更新那顆按鈕，不重建清單（避免遙控器焦點跳走）。 */
+    private fun fetchTitle(videoId: String, button: Button) {
+        if (!titlesInFlight.add(videoId)) return
+        ioExecutor.execute {
+            val title = VideoTitleFetcher.fetch(videoId)
+            runOnUiThread {
+                titlesInFlight.remove(videoId)
+                if (title != null && !isDestroyed) {
+                    recent.setTitle(videoId, title)
+                    button.text = title
+                }
+            }
+        }
     }
 }
