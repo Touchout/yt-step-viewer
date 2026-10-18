@@ -57,21 +57,35 @@
             android:visibility="gone">
 
             <Button
-                android:id="@+id/backButton"
+                android:id="@+id/largeBackButton"
                 style="@style/TouchControl"
-                android:text="@string/step_back" />
+                android:text="@string/large_back" />
+
+            <Button
+                android:id="@+id/smallBackButton"
+                style="@style/TouchControl"
+                android:text="@string/small_back" />
 
             <Button
                 android:id="@+id/playButton"
                 style="@style/TouchControl" />
 
             <Button
-                android:id="@+id/forwardButton"
+                android:id="@+id/smallForwardButton"
                 style="@style/TouchControl"
-                android:text="@string/step_forward" />
+                android:text="@string/small_forward" />
 
             <Button
-                android:id="@+id/stepButton"
+                android:id="@+id/largeForwardButton"
+                style="@style/TouchControl"
+                android:text="@string/large_forward" />
+
+            <Button
+                android:id="@+id/smallStepButton"
+                style="@style/TouchControl" />
+
+            <Button
+                android:id="@+id/largeStepButton"
                 style="@style/TouchControl" />
 
             <Button

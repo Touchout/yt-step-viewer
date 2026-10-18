@@ -4,8 +4,10 @@
     <string name="open">開啟</string>
     <string name="recent">最近看過</string>
     <string name="invalid_url">看不懂這個網址，請確認是 YouTube 影片連結</string>
-    <string name="help">←/→ 步進　↑/↓ 切換步距　OK 播放/暫停　長按 OK 切換速度　⏪/⏩ 也可切速度</string>
-    <string name="help_touch">按住 ◀/▶ 可連續步進　點步距、速度按鈕切換</string>
-    <string name="step_back">◀ 後退</string>
-    <string name="step_forward">前進 ▶</string>
+    <string name="help">←/→ 小步　↓/↑ 大步　OK 播放/暫停　長按 OK 或選單鍵：設定步距、速度</string>
+    <string name="help_touch">按住步進鍵可連續步進　拖動進度條、手指停住就會預覽　點「小／大」設定步距</string>
+    <string name="large_back">⏪ 大</string>
+    <string name="small_back">◀ 小</string>
+    <string name="small_forward">小 ▶</string>
+    <string name="large_forward">大 ⏩</string>
 </resources>
