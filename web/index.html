@@ -3,9 +3,25 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#111418" media="(prefers-color-scheme: dark)">
-<meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" id="themeColor" content="#111418">
 <meta name="color-scheme" content="dark light">
+<script>
+  // 主題要在畫面出來前決定，避免先閃一下另一種配色。
+  // 設定存在 localStorage "theme"：auto（跟隨系統）／light／dark
+  (() => {
+    const systemLight = matchMedia("(prefers-color-scheme: light)");
+    function applyTheme() {
+      let choice = "auto";
+      try { choice = JSON.parse(localStorage.getItem("theme")) || "auto"; } catch {}
+      const light = choice === "light" || (choice === "auto" && systemLight.matches);
+      document.documentElement.dataset.theme = light ? "light" : "dark";
+      document.getElementById("themeColor")?.setAttribute("content", light ? "#f4f5f7" : "#111418");
+    }
+    applyTheme();
+    systemLight.addEventListener("change", applyTheme);
+    window.applyTheme = applyTheme;
+  })();
+</script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>排球動作步進</title>
 <link rel="manifest" href="manifest.webmanifest">
@@ -27,22 +43,21 @@
     --accent-text: #f5a623;     /* 橘色當文字用（連結、★） */
     color-scheme: dark;
   }
-  /* 系統是淺色主題時改用淺色配色；影片框維持黑底 */
-  @media (prefers-color-scheme: light) {
-    :root {
-      --bg: #f4f5f7;
-      --panel: #ffffff;
-      --panel-2: #e4e7ec;
-      --text: #15181c;
-      --muted: #5b6570;
-      --buffer: #b4bcc6;
-      --track: #d6dbe2;
-      --danger: #c62828;
-      --pressed: #cdd3db;
-      --accent-text: #a35f00;
-      color-scheme: light;
-    }
+  /* 淺色配色（跟隨系統或手動選擇，由 <head> 的 applyTheme 設定 data-theme）；影片框維持黑底 */
+  :root[data-theme="light"] {
+    --bg: #f4f5f7;
+    --panel: #ffffff;
+    --panel-2: #e4e7ec;
+    --text: #15181c;
+    --muted: #5b6570;
+    --buffer: #b4bcc6;
+    --track: #d6dbe2;
+    --danger: #c62828;
+    --pressed: #cdd3db;
+    --accent-text: #a35f00;
+    color-scheme: light;
   }
+
   * { box-sizing: border-box; }
   html, body { margin: 0; background: var(--bg); color: var(--text); }
   body {
@@ -61,7 +76,9 @@
 
   /* ---- 首頁 ---- */
   #home { max-width: 640px; margin: 0 auto; padding: 24px 16px 40px; }
-  h1 { font-size: 22px; margin: 8px 0 20px; }
+  h1 { font-size: 22px; margin: 0; }
+  .home-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 8px 0 20px; }
+  #themeBtn { font-size: 14px; padding: 6px 10px; white-space: nowrap; }
   .open-row { display: flex; gap: 8px; }
   .open-row input {
     flex: 1; min-width: 0; background: var(--panel); border: 1px solid var(--track);
@@ -236,7 +253,10 @@
 <body>
 
 <section id="home">
-  <h1>排球動作步進</h1>
+  <div class="home-head">
+    <h1>排球動作步進</h1>
+    <button id="themeBtn" type="button" aria-label="切換深淺主題"></button>
+  </div>
   <form class="open-row" id="openForm">
     <input id="urlInput" type="text" inputmode="url" autocomplete="off"
            placeholder="貼上 YouTube 影片或頻道網址" aria-label="YouTube 影片或頻道網址">
@@ -1172,6 +1192,24 @@ for (const b of document.querySelectorAll(".tabs button")) {
     if (chState && chState.tab !== b.dataset.tab) selectTab(b.dataset.tab);
   });
 }
+
+// ---- 深淺主題 ----
+const THEMES = [
+  { value: "auto", label: "🌓 跟隨系統" },
+  { value: "light", label: "☀️ 淺色" },
+  { value: "dark", label: "🌙 深色" },
+];
+function renderThemeButton() {
+  const current = load("theme", "auto");
+  $("themeBtn").textContent = (THEMES.find((t) => t.value === current) || THEMES[0]).label;
+}
+$("themeBtn").addEventListener("click", () => {
+  const i = THEMES.findIndex((t) => t.value === load("theme", "auto"));
+  save("theme", THEMES[(i + 1) % THEMES.length].value);
+  window.applyTheme();
+  renderThemeButton();
+});
+renderThemeButton();
 
 // ---- 畫面切換 ----
 // 網址：#v=影片ID 播放、#c=頻道ID 頻道清單、空白是首頁。可以分享，也能用返回鍵往回。
