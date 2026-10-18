@@ -1,0 +1,17 @@
+{
+  "name": "排球動作步進",
+  "short_name": "動作步進",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#111418",
+  "theme_color": "#111418",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ],
+  "share_target": {
+    "action": "./",
+    "method": "GET",
+    "params": { "title": "title", "text": "text", "url": "url" }
+  }
+}

@@ -27,6 +27,25 @@
 
 播放器下方的資訊列顯示：狀態、目前時間 / 總長、步距、速度。資訊列刻意放在播放器「外面」，不疊在畫面上（YouTube API 條款不允許遮擋播放器）。
 
+## 網頁版（手機、平板、電腦）
+
+`web/` 是同樣功能的網頁版，單一個 `index.html`，不需要 build。手機瀏覽器打開網址就能用，iPhone 也可以；也可以「加到主畫面」當 App 用。Android 上加到主畫面後，從 YouTube App「分享」也會出現這個網頁版。
+
+- 網址可以直接帶影片：`…/#v=影片ID`，方便傳給別人
+- 觸控：和 Android 版手機畫面一樣的按鈕、按住連續步進、進度條手指停住就預覽；點影片畫面播放／暫停
+- 鍵盤：←/→（或 `,` / `.`）小步、↓/↑ 大步、空白鍵播放／暫停、`[` / `]` 調速度、Esc 回首頁
+- 最近看過和步距設定存在各自瀏覽器裡，不會跨裝置同步
+- 網頁的時間是播放中每 0.1 秒向播放器查一次（IFrame API 沒有時間回報事件），步進一樣是自己維護游標
+
+部署：push 到 `main` 且有改到 `web/` 時，`.github/workflows/pages.yml` 會發布到 GitHub Pages。第一次要先到 repo 的 **Settings → Pages → Build and deployment → Source** 選 **GitHub Actions**。
+
+本機測試：
+
+```bash
+cd web && python3 -m http.server 8000
+# 開 http://localhost:8000
+```
+
 ## 實作重點
 
 - **自己維護目前時間**：`PlayerActivity.cursor`。`getCurrentTime()` 是非同步的，快速連按會讀到舊值，所以每次按鍵直接在自己的游標上加減步距再 `seekTo`。seek 後 600ms 內忽略播放器回報的時間，避免被舊值覆蓋。

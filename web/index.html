@@ -1,0 +1,697 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#111418">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>排球動作步進</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<style>
+  :root {
+    --bg: #111418;
+    --panel: #1b2027;
+    --panel-2: #252b34;
+    --text: #e8ebef;
+    --muted: #9aa3ad;
+    --accent: #f5a623;
+    --buffer: #4a525d;
+    --track: #2e343d;
+    --danger: #ff7b72;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); }
+  body {
+    font: 16px/1.5 system-ui, -apple-system, "Noto Sans TC", "PingFang TC", sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  button, input { font: inherit; color: inherit; }
+  button {
+    background: var(--panel-2); border: 0; border-radius: 10px;
+    padding: 10px 12px; cursor: pointer; touch-action: manipulation;
+    user-select: none; -webkit-user-select: none;
+  }
+  button:active, button.pressed { background: #39414d; }
+  [hidden] { display: none !important; }
+
+  /* ---- 首頁 ---- */
+  #home { max-width: 640px; margin: 0 auto; padding: 24px 16px 40px; }
+  h1 { font-size: 22px; margin: 8px 0 20px; }
+  .open-row { display: flex; gap: 8px; }
+  .open-row input {
+    flex: 1; min-width: 0; background: var(--panel); border: 1px solid var(--track);
+    border-radius: 10px; padding: 10px 12px;
+  }
+  .open-row button { background: var(--accent); color: #111; font-weight: 600; }
+  #openError { color: var(--danger); min-height: 1.5em; margin: 6px 0 0; font-size: 14px; }
+  h2 { font-size: 15px; color: var(--muted); font-weight: 500; margin: 24px 0 8px; }
+  #recentList { display: flex; flex-direction: column; gap: 6px; }
+  #recentList button {
+    text-align: left; background: var(--panel); white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  #recentEmpty { color: var(--muted); font-size: 14px; }
+
+  /* ---- 播放畫面 ---- */
+  #player { max-width: 1100px; margin: 0 auto; }
+  .video-wrap { position: relative; width: 100%; aspect-ratio: 16 / 9; background: #000; }
+  /* 不讓 iframe 吃掉觸控和按鍵：點畫面由外層處理播放／暫停，鍵盤焦點留在本頁 */
+  .video-wrap iframe, .video-wrap > div { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; pointer-events: none; }
+  .info { padding: 8px 12px 16px; }
+  #status {
+    font-variant-numeric: tabular-nums; font-size: 15px; display: flex;
+    flex-wrap: wrap; gap: 4px 16px; align-items: baseline;
+  }
+  #status .time { font-size: 18px; font-weight: 600; }
+  #status .error { color: var(--danger); width: 100%; }
+  #seek {
+    -webkit-appearance: none; appearance: none; width: 100%; height: 32px;
+    margin: 6px 0; background: transparent; touch-action: none;
+  }
+  #seek::-webkit-slider-runnable-track {
+    height: 6px; border-radius: 3px;
+    background: linear-gradient(to right, var(--accent) var(--played, 0%), var(--buffer) var(--played, 0%), var(--buffer) var(--loaded, 0%), var(--track) var(--loaded, 0%));
+  }
+  #seek::-moz-range-track {
+    height: 6px; border-radius: 3px;
+    background: linear-gradient(to right, var(--accent) var(--played, 0%), var(--buffer) var(--played, 0%), var(--buffer) var(--loaded, 0%), var(--track) var(--loaded, 0%));
+  }
+  #seek::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%;
+    background: var(--accent); margin-top: -7px; border: 0;
+  }
+  #seek::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: var(--accent); border: 0; }
+  .controls { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  .controls button { padding: 14px 4px; font-size: 17px; }
+  #playBtn { background: var(--accent); color: #111; font-weight: 700; }
+  .settings { display: grid; grid-template-columns: auto 1fr 1fr 1fr; gap: 6px; margin-top: 6px; }
+  .settings button { font-size: 14px; padding: 8px 4px; white-space: nowrap; }
+  .help { color: var(--muted); font-size: 13px; margin: 10px 0 0; }
+
+  /* ---- 選單 ---- */
+  dialog {
+    background: var(--panel); color: var(--text); border: 0; border-radius: 14px;
+    padding: 16px; width: min(320px, calc(100vw - 32px));
+  }
+  dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
+  dialog h3 { margin: 0 0 10px; font-size: 17px; }
+  .menu { display: flex; flex-direction: column; gap: 6px; }
+  .menu button { text-align: left; }
+  .menu button.current { outline: 2px solid var(--accent); }
+  .custom-row { display: flex; gap: 6px; margin-top: 10px; }
+  .custom-row input {
+    flex: 1; min-width: 0; background: var(--bg); border: 1px solid var(--track);
+    border-radius: 10px; padding: 8px 10px;
+  }
+  .dialog-error { color: var(--danger); font-size: 13px; min-height: 1.4em; margin: 6px 0 0; }
+
+  @media (min-width: 700px) {
+    .controls button { font-size: 18px; }
+  }
+</style>
+</head>
+<body>
+
+<section id="home">
+  <h1>排球動作步進</h1>
+  <form class="open-row" id="openForm">
+    <input id="urlInput" type="text" inputmode="url" autocomplete="off"
+           placeholder="貼上 YouTube 網址或影片 ID" aria-label="YouTube 網址或影片 ID">
+    <button type="submit">開啟</button>
+  </form>
+  <p id="openError"></p>
+  <h2>最近看過</h2>
+  <div id="recentList"></div>
+  <p id="recentEmpty">還沒有紀錄。</p>
+</section>
+
+<section id="player" hidden>
+  <div class="video-wrap" id="videoWrap"><div id="ytPlayer"></div></div>
+  <div class="info">
+    <div id="status"></div>
+    <input id="seek" type="range" min="0" max="0" step="1" value="0" aria-label="進度">
+    <div class="controls">
+      <button data-step="large" data-dir="-1" aria-label="後退大步距">⏪ 大</button>
+      <button data-step="small" data-dir="-1" aria-label="後退小步距">◀ 小</button>
+      <button id="playBtn" aria-label="播放／暫停">▶</button>
+      <button data-step="small" data-dir="1" aria-label="前進小步距">小 ▶</button>
+      <button data-step="large" data-dir="1" aria-label="前進大步距">大 ⏩</button>
+    </div>
+    <div class="settings">
+      <button id="backBtn">← 首頁</button>
+      <button id="smallBtn"></button>
+      <button id="largeBtn"></button>
+      <button id="rateBtn"></button>
+    </div>
+    <p class="help" id="help"></p>
+  </div>
+</section>
+
+<dialog id="stepDialog">
+  <h3 id="stepDialogTitle"></h3>
+  <div class="menu" id="stepMenu"></div>
+  <form class="custom-row" id="customForm">
+    <input id="customInput" type="text" inputmode="decimal" placeholder="自訂秒數，例如 0.03" aria-label="自訂秒數">
+    <button type="submit">確定</button>
+  </form>
+  <p class="dialog-error" id="customError"></p>
+</dialog>
+
+<script>
+"use strict";
+
+// ---- 常數（與 Android 版一致） ----
+const ONE_FRAME_30FPS = 1 / 30;
+const STEP_KINDS = {
+  small: { title: "小步距", short: "小", key: "small_step", def: 0.05, presets: [ONE_FRAME_30FPS, 0.05, 0.1, 0.2, 0.5] },
+  large: { title: "大步距", short: "大", key: "large_step", def: 1, presets: [0.5, 1, 2, 5, 10, 30] },
+};
+const MIN_STEP = 0.01, MAX_STEP = 600;
+const RATES = [0.25, 0.5, 1];
+/** seek 之後這段時間內忽略播放器回報的時間，避免舊值蓋掉自己維護的游標。 */
+const SEEK_SETTLE_MS = 600;
+/** 按住步進鍵時，限制 seek 的頻率，避免塞爆播放器。 */
+const REPEAT_SEEK_INTERVAL_MS = 120;
+/** 觸控按住步進鍵多久後開始連續步進。 */
+const TOUCH_REPEAT_DELAY_MS = 400;
+/** 拖動進度條時，手指停在原地多久才送 seek（移動中不送，否則每次 seek 都打斷上一次載入）。 */
+const SCRUB_DWELL_MS = 150;
+/** 手指移動小於這個距離（px）視為「停住」。 */
+const SCRUB_JITTER_PX = 6;
+const RECENT_MAX = 10;
+const ID_REGEX = /^[A-Za-z0-9_-]{11}$/;
+
+const $ = (id) => document.getElementById(id);
+const isTouch = matchMedia("(pointer: coarse)").matches;
+
+// ---- localStorage（無痕模式等情況可能拋錯，一律包起來） ----
+function load(key, fallback) {
+  try {
+    const v = localStorage.getItem(key);
+    return v == null ? fallback : JSON.parse(v);
+  } catch { return fallback; }
+}
+function save(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+}
+
+// ---- 影片 ID ----
+/** 從網址或純 ID 取出 11 碼影片 ID；看不懂就回傳 null。 */
+function parseVideoId(input) {
+  const text = (input || "").trim();
+  if (ID_REGEX.test(text)) return text;
+  // 分享文字可能夾帶其他字，先抓出第一個網址
+  const match = text.match(/https?:\/\/\S+/);
+  if (!match) return null;
+  let url;
+  try { url = new URL(match[0]); } catch { return null; }
+  const host = url.hostname.replace(/^www\./, "").replace(/^m\./, "");
+  const segments = url.pathname.split("/").filter(Boolean);
+  let candidate = null;
+  if (host === "youtu.be") {
+    candidate = segments[0];
+  } else if (host.endsWith("youtube.com")) {
+    candidate = ["shorts", "live", "embed", "v"].includes(segments[0])
+      ? segments[1]
+      : url.searchParams.get("v");
+  }
+  return candidate && ID_REGEX.test(candidate) ? candidate : null;
+}
+
+// ---- 最近看過 ----
+function recentList() { return load("recent", []); }
+function addRecent(id) {
+  const list = recentList();
+  const existing = list.find((v) => v.id === id) || { id, title: null };
+  save("recent", [existing, ...list.filter((v) => v.id !== id)].slice(0, RECENT_MAX));
+}
+function setRecentTitle(id, title) {
+  save("recent", recentList().map((v) => (v.id === id ? { ...v, title } : v)));
+}
+
+/** 用 YouTube 官方 oEmbed 取影片標題，不需要 API key。 */
+async function fetchTitle(id) {
+  try {
+    const watch = encodeURIComponent(`https://www.youtube.com/watch?v=${id}`);
+    const res = await fetch(`https://www.youtube.com/oembed?format=json&url=${watch}`);
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json.title || null;
+  } catch { return null; }
+}
+
+const titlesInFlight = new Set();
+function renderRecent() {
+  const container = $("recentList");
+  container.replaceChildren();
+  const list = recentList();
+  $("recentEmpty").hidden = list.length > 0;
+  for (const video of list) {
+    const button = document.createElement("button");
+    button.textContent = video.title || video.id;
+    button.addEventListener("click", () => openVideo(video.id));
+    container.append(button);
+    if (!video.title && !titlesInFlight.has(video.id)) {
+      titlesInFlight.add(video.id);
+      fetchTitle(video.id).then((title) => {
+        titlesInFlight.delete(video.id);
+        if (title) {
+          setRecentTitle(video.id, title);
+          button.textContent = title;
+        }
+      });
+    }
+  }
+}
+
+// ---- 步距設定 ----
+function getStep(kind) {
+  const v = load(STEP_KINDS[kind].key, null);
+  return typeof v === "number" && v >= MIN_STEP && v <= MAX_STEP ? v : STEP_KINDS[kind].def;
+}
+function setStep(kind, seconds) {
+  save(STEP_KINDS[kind].key, seconds);
+  updateStatus();
+}
+/** 0.05 → "0.05s"，1 → "1s"，1/30 → "1格" */
+function formatStep(seconds) {
+  if (Math.abs(seconds - ONE_FRAME_30FPS) < 1e-4) return "1格";
+  return `${parseFloat(seconds.toFixed(3))}s`;
+}
+function formatTime(seconds) {
+  const totalCentis = Math.floor(seconds * 100);
+  const minutes = Math.floor(totalCentis / 6000);
+  const secs = Math.floor((totalCentis % 6000) / 100);
+  const centis = totalCentis % 100;
+  return `${minutes}:${String(secs).padStart(2, "0")}.${String(centis).padStart(2, "0")}`;
+}
+
+// ---- 播放器狀態 ----
+let player = null;
+let playerReady = false;
+let pendingVideoId = null;
+let videoId = null;
+// getCurrentTime() 在 seek 後一段時間內會回報舊值，所以自己維護目前時間。
+let cursor = 0;
+let duration = 0;
+let playing = false;
+let lastSeekAt = 0;
+let rateIndex = RATES.length - 1;
+let errorMessage = null;
+let pollTimer = null;
+
+// 進度條拖動狀態
+let scrubbing = false;
+let resumeAfterScrub = false;
+let lastScrubTarget = -1;
+let dwellAnchor = -1;
+let dwellTimer = null;
+
+// ---- YouTube IFrame API ----
+function loadYouTubeApi() {
+  if (window.YT || document.querySelector("script[data-yt]")) return;
+  const script = document.createElement("script");
+  script.src = "https://www.youtube.com/iframe_api";
+  script.dataset.yt = "1";
+  document.head.append(script);
+}
+
+window.onYouTubeIframeAPIReady = () => {
+  player = new YT.Player("ytPlayer", {
+    width: "100%",
+    height: "100%",
+    host: "https://www.youtube.com",
+    playerVars: {
+      controls: 0,       // 隱藏 YouTube 自己的控制列
+      rel: 0,
+      iv_load_policy: 3, // 不顯示資訊卡
+      fs: 0,
+      playsinline: 1,    // iPhone 不要自動跳全螢幕
+      disablekb: 1,
+      origin: location.origin,
+    },
+    events: {
+      onReady: () => {
+        playerReady = true;
+        if (pendingVideoId) cueVideo(pendingVideoId);
+      },
+      onStateChange: (e) => {
+        playing = e.data === YT.PlayerState.PLAYING;
+        refreshDuration();
+        if (playing) startPolling(); else stopPolling();
+        updateStatus();
+      },
+      onPlaybackRateChange: (e) => {
+        const i = RATES.indexOf(e.data);
+        if (i >= 0) rateIndex = i;
+        updateStatus();
+      },
+      onError: (e) => {
+        errorMessage = {
+          2: "影片 ID 不正確",
+          5: "瀏覽器無法播放這支影片",
+          100: "找不到影片（可能是私人或已刪除）",
+          101: "這支影片不允許嵌入播放",
+          150: "這支影片不允許嵌入播放",
+          153: "YouTube 拒絕播放：瀏覽器沒有送出來源網址（Referer）",
+        }[e.data] || `播放錯誤：${e.data}`;
+        updateStatus();
+      },
+    },
+  });
+};
+
+function cueVideo(id) {
+  pendingVideoId = null;
+  player.cueVideoById({ videoId: id, startSeconds: 0 });
+  player.setPlaybackRate(RATES[rateIndex]);
+}
+
+function refreshDuration() {
+  const d = player && player.getDuration ? player.getDuration() : 0;
+  if (d > 0 && d !== duration) {
+    duration = d;
+    $("seek").max = Math.round(d * 1000);
+  }
+}
+
+/** IFrame API 沒有時間回報事件，播放中自己輪詢。 */
+function startPolling() {
+  if (pollTimer) return;
+  pollTimer = setInterval(() => {
+    if (!player) return;
+    if (playing && !scrubbing && performance.now() - lastSeekAt > SEEK_SETTLE_MS) {
+      cursor = player.getCurrentTime();
+    }
+    updateStatus();
+  }, 100);
+}
+function stopPolling() {
+  clearInterval(pollTimer);
+  pollTimer = null;
+}
+
+// ---- 播放控制 ----
+function seekTo(seconds) {
+  cursor = seconds;
+  lastSeekAt = performance.now();
+  player.seekTo(seconds, true);
+  updateStatus();
+}
+
+function step(kind, direction, isRepeat) {
+  if (!playerReady || scrubbing || !videoId) return;
+  const now = performance.now();
+  if (isRepeat && now - lastSeekAt < REPEAT_SEEK_INTERVAL_MS) return;
+  if (playing) {
+    player.pauseVideo();
+    playing = false;
+  }
+  const max = duration > 0 ? duration : Number.MAX_VALUE;
+  seekTo(Math.min(max, Math.max(0, cursor + direction * getStep(kind))));
+}
+
+function togglePlay() {
+  if (!playerReady || !videoId) return;
+  if (playing) {
+    player.pauseVideo();
+  } else {
+    lastSeekAt = performance.now();
+    player.playVideo();
+  }
+}
+
+function changeRate(delta, wrap) {
+  rateIndex = wrap
+    ? (rateIndex + delta + RATES.length) % RATES.length
+    : Math.min(RATES.length - 1, Math.max(0, rateIndex + delta));
+  if (playerReady) player.setPlaybackRate(RATES[rateIndex]);
+  updateStatus();
+}
+
+function updateStatus() {
+  const small = formatStep(getStep("small"));
+  const large = formatStep(getStep("large"));
+  const rate = RATES[rateIndex];
+  const status = $("status");
+  status.replaceChildren();
+  const add = (cls, text) => {
+    const span = document.createElement("span");
+    span.className = cls;
+    span.textContent = text;
+    status.append(span);
+  };
+  add("time", `${playing ? "▶" : "❚❚"}  ${formatTime(cursor)} / ${formatTime(duration)}`);
+  add("", `小步 ${small}　大步 ${large}　速度 ${rate}x`);
+  if (errorMessage) add("error", `⚠ ${errorMessage}`);
+
+  const seek = $("seek");
+  if (!scrubbing) seek.value = Math.round(cursor * 1000);
+  const max = Number(seek.max) || 1;
+  seek.style.setProperty("--played", `${(Number(seek.value) / max) * 100}%`);
+  const loaded = playerReady && player.getVideoLoadedFraction ? player.getVideoLoadedFraction() : 0;
+  seek.style.setProperty("--loaded", `${loaded * 100}%`);
+
+  $("playBtn").textContent = playing ? "❚❚" : "▶";
+  $("smallBtn").textContent = `小 ${small}`;
+  $("largeBtn").textContent = `大 ${large}`;
+  $("rateBtn").textContent = `${rate}x`;
+}
+
+// ---- 進度條 ----
+function jitterTolerance() {
+  const seek = $("seek");
+  const width = Math.max(1, seek.clientWidth - 20);
+  return (Number(seek.max) * SCRUB_JITTER_PX) / width;
+}
+
+function scrubSeekTo(progress) {
+  if (!playerReady) return;
+  lastScrubTarget = progress;
+  seekTo(progress / 1000);
+}
+
+function setupSeekBar() {
+  const seek = $("seek");
+  seek.addEventListener("pointerdown", () => {
+    scrubbing = true;
+    resumeAfterScrub = playing;
+    lastScrubTarget = -1;
+    dwellAnchor = -1;
+    // 暫停後 seek 才會停在那一格給你看
+    if (playing && playerReady) {
+      player.pauseVideo();
+      playing = false;
+    }
+  });
+  seek.addEventListener("input", () => {
+    const progress = Number(seek.value);
+    cursor = progress / 1000;
+    updateStatus();
+    if (!scrubbing) {
+      // 鍵盤操作進度條等非拖動情況，直接跳
+      scrubSeekTo(progress);
+      return;
+    }
+    // 抖動範圍內的移動不重設計時，否則手指永遠「沒停住」
+    if (dwellAnchor >= 0 && Math.abs(progress - dwellAnchor) <= jitterTolerance()) return;
+    dwellAnchor = progress;
+    clearTimeout(dwellTimer);
+    dwellTimer = setTimeout(() => scrubSeekTo(Number(seek.value)), SCRUB_DWELL_MS);
+  });
+  const endScrub = () => {
+    if (!scrubbing) return;
+    scrubbing = false;
+    clearTimeout(dwellTimer);
+    const target = Number(seek.value);
+    if (lastScrubTarget >= 0 && Math.abs(target - lastScrubTarget) <= jitterTolerance()) {
+      // 放開的位置就是剛剛預覽的位置，不再 seek，免得打斷正在載入的畫面
+      cursor = lastScrubTarget / 1000;
+      updateStatus();
+    } else {
+      scrubSeekTo(target);
+    }
+    if (resumeAfterScrub && playerReady) player.playVideo();
+  };
+  seek.addEventListener("pointerup", endScrub);
+  seek.addEventListener("pointercancel", endScrub);
+  seek.addEventListener("change", endScrub);
+}
+
+// ---- 觸控按鈕 ----
+/** 點一下步進一次；按住超過 TOUCH_REPEAT_DELAY_MS 就連續步進。 */
+function bindHoldToStep(button) {
+  const kind = button.dataset.step;
+  const direction = Number(button.dataset.dir);
+  let delayTimer = null, repeatTimer = null;
+  const stop = () => {
+    button.classList.remove("pressed");
+    clearTimeout(delayTimer);
+    clearInterval(repeatTimer);
+  };
+  button.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    button.setPointerCapture(e.pointerId);
+    button.classList.add("pressed");
+    step(kind, direction, false);
+    delayTimer = setTimeout(() => {
+      repeatTimer = setInterval(() => step(kind, direction, true), REPEAT_SEEK_INTERVAL_MS);
+    }, TOUCH_REPEAT_DELAY_MS);
+  });
+  button.addEventListener("pointerup", stop);
+  button.addEventListener("pointercancel", stop);
+  button.addEventListener("contextmenu", (e) => e.preventDefault());
+}
+
+// ---- 步距選單 ----
+let dialogKind = "small";
+function showStepPicker(kind) {
+  dialogKind = kind;
+  const def = STEP_KINDS[kind];
+  const current = getStep(kind);
+  $("stepDialogTitle").textContent = def.title;
+  const menu = $("stepMenu");
+  menu.replaceChildren();
+  for (const preset of def.presets) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = preset === ONE_FRAME_30FPS ? "1格（1/30 秒）" : formatStep(preset);
+    if (Math.abs(preset - current) < 1e-4) {
+      button.classList.add("current");
+      button.textContent += "  ✓";
+    }
+    button.addEventListener("click", () => {
+      setStep(kind, preset);
+      $("stepDialog").close();
+    });
+    menu.append(button);
+  }
+  const isPreset = def.presets.some((p) => Math.abs(p - current) < 1e-4);
+  $("customInput").value = isPreset ? "" : String(parseFloat(current.toFixed(3)));
+  $("customError").textContent = "";
+  $("stepDialog").showModal();
+}
+
+$("customForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const seconds = parseFloat($("customInput").value.trim());
+  if (!(seconds >= MIN_STEP && seconds <= MAX_STEP)) {
+    $("customError").textContent = `請輸入 ${MIN_STEP} 到 ${MAX_STEP} 秒之間的數字`;
+    return;
+  }
+  setStep(dialogKind, seconds);
+  $("stepDialog").close();
+});
+// 點背景關閉
+$("stepDialog").addEventListener("click", (e) => {
+  if (e.target === $("stepDialog")) $("stepDialog").close();
+});
+
+// ---- 鍵盤 ----
+const keyRepeat = {};
+document.addEventListener("keydown", (e) => {
+  if ($("player").hidden || $("stepDialog").open) return;
+  if (e.target instanceof HTMLInputElement && e.target.type !== "range") return;
+  const repeat = e.repeat;
+  switch (e.key) {
+    case "ArrowLeft": case ",": step("small", -1, repeat); break;
+    case "ArrowRight": case ".": step("small", 1, repeat); break;
+    case "ArrowDown": step("large", -1, repeat); break;
+    case "ArrowUp": step("large", 1, repeat); break;
+    case " ": case "Enter": case "k": if (!repeat) togglePlay(); break;
+    case "[": if (!repeat) changeRate(-1, false); break;
+    case "]": if (!repeat) changeRate(1, false); break;
+    case "Escape": if (!repeat) goHome(); break;
+    default: return;
+  }
+  e.preventDefault();
+});
+
+// ---- 畫面切換（網址用 #v=影片ID，可以分享，也能用返回鍵回首頁） ----
+function openVideo(id) {
+  location.hash = `v=${id}`;
+}
+function goHome() {
+  location.hash = "";
+}
+
+function route() {
+  const id = parseVideoId(new URLSearchParams(location.hash.slice(1)).get("v") || "");
+  if (id) showPlayer(id); else showHome();
+}
+
+function showHome() {
+  if (playerReady && videoId) player.stopVideo();
+  stopPolling();
+  videoId = null;
+  $("player").hidden = true;
+  $("home").hidden = false;
+  document.title = "排球動作步進";
+  renderRecent();
+}
+
+function showPlayer(id) {
+  $("home").hidden = true;
+  $("player").hidden = false;
+  addRecent(id);
+  if (id === videoId) return;
+  videoId = id;
+  cursor = 0;
+  duration = 0;
+  playing = false;
+  errorMessage = null;
+  $("seek").max = 0;
+  updateStatus();
+  loadYouTubeApi();
+  if (playerReady) cueVideo(id); else pendingVideoId = id;
+  const cached = recentList().find((v) => v.id === id);
+  if (cached && cached.title) document.title = cached.title;
+}
+
+// ---- 初始化 ----
+$("openForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const id = parseVideoId($("urlInput").value);
+  if (!id) {
+    $("openError").textContent = "看不懂這個網址，請確認是 YouTube 影片連結";
+    return;
+  }
+  $("openError").textContent = "";
+  $("urlInput").value = "";
+  openVideo(id);
+});
+$("urlInput").addEventListener("input", () => { $("openError").textContent = ""; });
+
+document.querySelectorAll("[data-step]").forEach(bindHoldToStep);
+$("playBtn").addEventListener("click", togglePlay);
+$("videoWrap").addEventListener("click", togglePlay);
+$("smallBtn").addEventListener("click", () => showStepPicker("small"));
+$("largeBtn").addEventListener("click", () => showStepPicker("large"));
+$("rateBtn").addEventListener("click", () => changeRate(1, true));
+$("backBtn").addEventListener("click", goHome);
+$("help").textContent = isTouch
+  ? "按住步進鍵可連續步進　拖動進度條、手指停住就會預覽　點「小／大」設定步距　點畫面播放／暫停"
+  : "←/→ 小步　↓/↑ 大步　空白鍵 播放/暫停　[ / ] 調速度　Esc 回首頁";
+setupSeekBar();
+
+// 從分享（PWA share target）或 ?v= 進來的，轉成 #v=
+(() => {
+  const params = new URLSearchParams(location.search);
+  const shared = params.get("v") || params.get("url") || params.get("text") || params.get("title");
+  if (shared != null) {
+    const id = parseVideoId(shared) || parseVideoId(`${params.get("text") || ""} ${params.get("url") || ""}`);
+    history.replaceState(null, "", location.pathname + (id ? `#v=${id}` : ""));
+  }
+})();
+window.addEventListener("hashchange", route);
+route();
+
+if ("serviceWorker" in navigator && location.protocol === "https:") {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+</script>
+</body>
+</html>
