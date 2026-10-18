@@ -3,7 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#111418">
+<meta name="theme-color" content="#111418" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f4f5f7" media="(prefers-color-scheme: light)">
+<meta name="color-scheme" content="dark light">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>排球動作步進</title>
 <link rel="manifest" href="manifest.webmanifest">
@@ -20,6 +22,26 @@
     --buffer: #4a525d;
     --track: #2e343d;
     --danger: #ff7b72;
+    --pressed: #39414d;
+    --on-accent: #111;          /* 橘色按鈕上的字 */
+    --accent-text: #f5a623;     /* 橘色當文字用（連結、★） */
+    color-scheme: dark;
+  }
+  /* 系統是淺色主題時改用淺色配色；影片框維持黑底 */
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f4f5f7;
+      --panel: #ffffff;
+      --panel-2: #e4e7ec;
+      --text: #15181c;
+      --muted: #5b6570;
+      --buffer: #b4bcc6;
+      --track: #d6dbe2;
+      --danger: #c62828;
+      --pressed: #cdd3db;
+      --accent-text: #a35f00;
+      color-scheme: light;
+    }
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; background: var(--bg); color: var(--text); }
@@ -34,7 +56,7 @@
     padding: 10px 12px; cursor: pointer; touch-action: manipulation;
     user-select: none; -webkit-user-select: none;
   }
-  button:active, button.pressed { background: #39414d; }
+  button:active, button.pressed { background: var(--pressed); }
   [hidden] { display: none !important; }
 
   /* ---- 首頁 ---- */
@@ -45,7 +67,7 @@
     flex: 1; min-width: 0; background: var(--panel); border: 1px solid var(--track);
     border-radius: 10px; padding: 10px 12px;
   }
-  .open-row button { background: var(--accent); color: #111; font-weight: 600; }
+  .open-row button { background: var(--accent); color: var(--on-accent); font-weight: 600; }
   #openError { color: var(--danger); min-height: 1.5em; margin: 6px 0 0; font-size: 14px; }
   h2 { font-size: 15px; color: var(--muted); font-weight: 500; margin: 24px 0 8px; }
   #recentList { display: flex; flex-direction: column; gap: 6px; }
@@ -75,14 +97,14 @@
   }
   .note { font-size: 13px; min-height: 1.4em; margin: 6px 0 0; color: var(--muted); }
   .note.error { color: var(--danger); }
-  a { color: var(--accent); }
+  a { color: var(--accent-text); }
 
   /* ---- 頻道影片清單 ---- */
   #channel { max-width: 1100px; margin: 0 auto; padding: 12px 16px 40px; }
   .ch-head { display: flex; align-items: center; gap: 10px; }
   .ch-head img { width: 40px; height: 40px; }
   #chTitle { flex: 1; min-width: 0; font-size: 18px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  #favBtn.on { color: var(--accent); }
+  #favBtn.on { color: var(--accent-text); }
   .ch-tools { display: flex; gap: 8px; margin: 12px 0 8px; align-items: center; }
   .ch-tools input {
     flex: 1; min-width: 0; background: var(--panel); border: 1px solid var(--track);
@@ -90,7 +112,7 @@
   }
   .tabs { display: flex; gap: 4px; }
   .tabs button { padding: 8px 12px; font-size: 14px; }
-  .tabs button.active { background: var(--accent); color: #111; font-weight: 600; }
+  .tabs button.active { background: var(--accent); color: var(--on-accent); font-weight: 600; }
   #chList { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 8px; }
   .video-card {
     display: flex; gap: 10px; text-align: left; padding: 6px; background: var(--panel); align-items: flex-start;
@@ -139,7 +161,7 @@
   #seek::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: var(--accent); border: 0; }
   .controls { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
   .controls button { padding: 14px 4px; font-size: 17px; }
-  #playBtn { background: var(--accent); color: #111; font-weight: 700; }
+  #playBtn { background: var(--accent); color: var(--on-accent); font-weight: 700; }
   .settings { display: grid; grid-template-columns: auto 1fr 1fr 1fr; gap: 6px; margin-top: 6px; }
   .settings button { font-size: 14px; padding: 8px 4px; white-space: nowrap; }
   .help { color: var(--muted); font-size: 13px; margin: 10px 0 0; }
