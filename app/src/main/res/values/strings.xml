@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">排球動作步進</string>
+    <string name="input_hint">貼上 YouTube 網址或影片 ID</string>
+    <string name="open">開啟</string>
+    <string name="recent">最近看過</string>
+    <string name="invalid_url">看不懂這個網址，請確認是 YouTube 影片連結</string>
+    <string name="help">←/→ 步進　↑/↓ 切換步距　OK 播放/暫停　長按 OK 切換速度　⏪/⏩ 也可切速度</string>
+</resources>

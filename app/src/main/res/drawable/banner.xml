@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Google TV 橫幅 320x180（POC 用的簡單向量圖） -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="320dp"
+    android:height="180dp"
+    android:viewportWidth="320"
+    android:viewportHeight="180">
+    <path android:fillColor="#14213D" android:pathData="M0,0h320v180h-320z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M160,90m-60,0a60,60 0,1 1,120 0a60,60 0,1 1,-120 0" />
+    <path android:strokeColor="#F2A900" android:strokeWidth="8"
+        android:pathData="M110,58C140,70 180,70 210,58M104,104C140,118 180,118 216,104M160,30C140,60 140,120 160,150" />
+</vector>
